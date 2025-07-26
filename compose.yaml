@@ -1,31 +1,33 @@
 services:
   lgtm:
-    image: grafana/otel-lgtm:latest
+    image: grafana/otel-lgtm:0.11.6
     ports:
-      - "3000:3000" # Grafana UI
-      - "4317:4317" # OTLP gRPC (traces)
-      - "4318:4318" # OTLP HTTP (traces)
-      - "9009:9009" # Prometheus remote write for metrics
-      - "3100:3100" # Loki logs (if needed)
+      - "3000:3000"
+    environment:
+      - GF_SECURITY_ADMIN_PASSWORD=admin
+    restart: unless-stopped
 
-  promtail:
-    image: grafana/promtail:latest
+  alloy:
+    image: grafana/alloy:v1.10.0
+    ports:
+      - "12345:12345"
     volumes:
-      - /var/log/journal:/var/log/journal:ro
-      - ./promtail-config.yaml:/etc/promtail/config.yaml
-    command: -config.file=/etc/promtail/config.yaml
+      - ./infra/alloy/config.alloy:/etc/alloy/config.alloy:ro
+    command: >
+      run --server.http.listen-addr=0.0.0.0:12345
+          --storage.path=/var/lib/alloy/data
+          /etc/alloy/config.alloy
     depends_on:
       - lgtm
 
   app:
-    build: .
+    build: ./app
     ports:
       - "8080:8080"
     environment:
       - OTEL_EXPORTER_OTLP_ENDPOINT=http://lgtm
     depends_on:
       - lgtm
+      - alloy
     logging:
       driver: journald
-      options:
-        tag: "{{.Name}}"

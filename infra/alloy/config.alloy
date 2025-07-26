@@ -1,0 +1,22 @@
+loki.source.journal "systemd" {
+  forward_to = [loki.process.default.receiver]
+}
+
+// Processor: Optionally add labels or parse log content
+loki.process "default" {
+  stage.labels {
+    values = {
+      "job" = "systemd",
+    }
+  }
+
+  forward_to = [loki.write.default.receiver]
+}
+
+// Exporter: Push logs to Loki
+loki.write "default" {
+  endpoint {
+    url = "http://loki:3100/loki/api/v1/push"
+  }
+}
+

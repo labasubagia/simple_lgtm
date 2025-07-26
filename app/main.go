@@ -76,7 +76,12 @@ func mainHandler(w http.ResponseWriter, r *http.Request) {
 func main() {
 	initMetrics()
 	ctx := context.Background()
-	defer initTracer(ctx)(ctx)
+	shutdownTracer := initTracer(ctx)
+	defer func() {
+		if err := shutdownTracer(ctx); err != nil {
+			log.Fatalf("failed to shutdown tracer: %v", err)
+		}
+	}()
 
 	mux := http.NewServeMux()
 	mux.Handle("/", otelhttp.NewHandler(http.HandlerFunc(mainHandler), "main"))
