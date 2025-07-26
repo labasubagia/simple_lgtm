@@ -1,5 +1,6 @@
 loki.source.journal "systemd" {
   forward_to = [loki.process.default.receiver]
+  path = "/var/log/journal"
 }
 
 // Processor: Optionally add labels or parse log content
@@ -12,7 +13,6 @@ loki.process "default" {
 
   forward_to = [loki.write.default.receiver]
 }
-
 // Exporter: Push logs to Loki
 loki.write "default" {
   endpoint {
