@@ -3,6 +3,7 @@ package repository
 import (
 	"context"
 	"fmt"
+	"log/slog"
 	"sync"
 
 	"simple_lgtm/internal/model"
@@ -20,13 +21,12 @@ type Repository interface {
 }
 
 type inMemoryRepository struct {
-	data map[string]string
-	mu   sync.RWMutex
+	data sync.Map
 }
 
 func NewInMemoryRepository() Repository {
 	return &inMemoryRepository{
-		data: make(map[string]string),
+		data: sync.Map{},
 	}
 }
 
@@ -36,14 +36,11 @@ func (r *inMemoryRepository) CreateData(ctx context.Context, id string, value st
 
 	span.SetAttributes(attribute.String("data.id", id), attribute.String("data.value", value))
 
-	r.mu.Lock()
-	defer r.mu.Unlock()
-
-	if _, exists := r.data[id]; exists {
+	if _, exists := r.data.Load(id); exists {
 		return fmt.Errorf("data with ID %s already exists", id)
 	}
 
-	r.data[id] = value
+	r.data.Store(id, value)
 	return nil
 }
 
@@ -53,15 +50,12 @@ func (r *inMemoryRepository) GetData(ctx context.Context, id string) (string, er
 
 	span.SetAttributes(attribute.String("data.id", id))
 
-	r.mu.RLock()
-	defer r.mu.RUnlock()
-
-	value, ok := r.data[id]
+	value, ok := r.data.Load(id)
 	if !ok {
 		return "", fmt.Errorf("data with ID %s not found", id)
 	}
 
-	return value, nil
+	return value.(string), nil
 }
 
 func (r *inMemoryRepository) UpdateData(ctx context.Context, id string, newValue string) error {
@@ -70,14 +64,11 @@ func (r *inMemoryRepository) UpdateData(ctx context.Context, id string, newValue
 
 	span.SetAttributes(attribute.String("data.id", id), attribute.String("data.newValue", newValue))
 
-	r.mu.Lock()
-	defer r.mu.Unlock()
-
-	if _, exists := r.data[id]; !exists {
+	if _, exists := r.data.Load(id); !exists {
 		return fmt.Errorf("data with ID %s not found", id)
 	}
 
-	r.data[id] = newValue
+	r.data.Store(id, newValue)
 	return nil
 }
 
@@ -87,14 +78,11 @@ func (r *inMemoryRepository) DeleteData(ctx context.Context, id string) error {
 
 	span.SetAttributes(attribute.String("data.id", id))
 
-	r.mu.Lock()
-	defer r.mu.Unlock()
-
-	if _, exists := r.data[id]; !exists {
+	if _, exists := r.data.Load(id); !exists {
 		return fmt.Errorf("data with ID %s not found", id)
 	}
 
-	delete(r.data, id)
+	r.data.Delete(id)
 	return nil
 }
 
@@ -102,14 +90,14 @@ func (r *inMemoryRepository) ListAllData(ctx context.Context) ([]model.DataItem,
 	_, span := otel.Tracer("app-tracer").Start(ctx, "ListAllDataInRepo")
 	defer span.End()
 
-	r.mu.RLock()
-	defer r.mu.RUnlock()
+	// TODO: maybe debug SQL query here
+	slog.DebugContext(ctx, "Listing all data items")
 
-	// Create a slice of DataItem to return the data
-	dataList := make([]model.DataItem, 0, len(r.data))
-	for key, value := range r.data {
-		dataList = append(dataList, model.DataItem{ID: key, Value: value})
-	}
+	dataList := make([]model.DataItem, 0)
+	r.data.Range(func(key, value any) bool {
+		dataList = append(dataList, model.DataItem{ID: key.(string), Value: value.(string)})
+		return true
+	})
 
 	return dataList, nil
 }

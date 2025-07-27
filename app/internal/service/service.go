@@ -3,7 +3,6 @@ package service
 import (
 	"context"
 	"fmt"
-	"log/slog"
 	"simple_lgtm/internal/model"
 	"simple_lgtm/internal/repository"
 
@@ -84,9 +83,6 @@ func (s *appService) DeleteData(ctx context.Context, id string) error {
 func (s *appService) ListAllData(ctx context.Context) ([]model.DataItem, error) {
 	_, span := otel.Tracer("app-tracer").Start(ctx, "ListAllDataService")
 	defer span.End()
-
-	// TODO: maybe debug SQL query here
-	slog.DebugContext(ctx, "Listing all data items")
 
 	data, err := s.repo.ListAllData(ctx)
 	if err != nil {
