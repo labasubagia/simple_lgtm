@@ -9,10 +9,10 @@ import (
 	"os"
 	"simple_lgtm/internal/config"
 	"simple_lgtm/internal/handler"
-	"simple_lgtm/internal/pkg/metrics"
-	"simple_lgtm/internal/pkg/tracer"
 	"simple_lgtm/internal/repository"
 	"simple_lgtm/internal/service"
+	"simple_lgtm/pkg/metrics"
+	"simple_lgtm/pkg/tracer"
 )
 
 func main() {

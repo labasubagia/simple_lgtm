@@ -7,7 +7,7 @@ import (
 	"sync"
 
 	"simple_lgtm/internal/model"
-	"simple_lgtm/internal/pkg/errs"
+	"simple_lgtm/pkg/errs"
 
 	"go.opentelemetry.io/otel"
 	"go.opentelemetry.io/otel/attribute"

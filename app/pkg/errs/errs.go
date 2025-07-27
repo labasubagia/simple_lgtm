@@ -6,16 +6,16 @@ import (
 	"net/http"
 )
 
-type ErrCode string
+type errCode string
 
 const (
-	ErrInternal     ErrCode = "INTERNAL"
-	ErrNotFound     ErrCode = "NOT_FOUND"
-	ErrInvalidInput ErrCode = "INVALID_INPUT"
+	codeInternal     errCode = "INTERNAL"
+	codeNotFound     errCode = "NOT_FOUND"
+	codeInvalidInput errCode = "INVALID_INPUT"
 )
 
 type appError struct {
-	Code ErrCode
+	Code errCode
 	Err  error
 }
 
@@ -27,21 +27,21 @@ func NewInternal(err error) error {
 	if err == nil {
 		return nil
 	}
-	return &appError{Code: ErrInternal, Err: err}
+	return &appError{Code: codeInternal, Err: err}
 }
 
 func NewInvalidInput(err error) error {
 	if err == nil {
 		return nil
 	}
-	return &appError{Code: ErrInvalidInput, Err: err}
+	return &appError{Code: codeInvalidInput, Err: err}
 }
 
 func NewNotFound(err error) error {
 	if err == nil {
 		return nil
 	}
-	return &appError{Code: ErrNotFound, Err: err}
+	return &appError{Code: codeNotFound, Err: err}
 }
 
 func MapHttp(err error) (statusCode int, message string) {
@@ -52,14 +52,14 @@ func MapHttp(err error) (statusCode int, message string) {
 	var appErr *appError
 	if errors.As(err, &appErr) {
 		switch appErr.Code {
-		case ErrInternal:
+		case codeInternal:
 			return http.StatusInternalServerError, err.Error()
-		case ErrNotFound:
+		case codeNotFound:
 			return http.StatusNotFound, err.Error()
-		case ErrInvalidInput:
+		case codeInvalidInput:
 			return http.StatusBadRequest, err.Error()
 		default:
-			return http.StatusInternalServerError, fmt.Sprintf("Unknown error: %s", err.Error())
+			return http.StatusInternalServerError, fmt.Sprintf("Unknown app error: %s", err.Error())
 		}
 	}
 
