@@ -7,6 +7,7 @@ import (
 	"sync"
 
 	"simple_lgtm/internal/model"
+	"simple_lgtm/internal/pkg/errs"
 
 	"go.opentelemetry.io/otel"
 	"go.opentelemetry.io/otel/attribute"
@@ -37,7 +38,7 @@ func (r *inMemoryRepository) CreateData(ctx context.Context, id string, value st
 	span.SetAttributes(attribute.String("data.id", id), attribute.String("data.value", value))
 
 	if _, exists := r.data.Load(id); exists {
-		return fmt.Errorf("data with ID %s already exists", id)
+		return errs.NewInvalidInput(fmt.Errorf("data with ID %s already exists", id))
 	}
 
 	r.data.Store(id, value)
@@ -52,7 +53,7 @@ func (r *inMemoryRepository) GetData(ctx context.Context, id string) (string, er
 
 	value, ok := r.data.Load(id)
 	if !ok {
-		return "", fmt.Errorf("data with ID %s not found", id)
+		return "", errs.NewNotFound(fmt.Errorf("data with ID %s not found", id))
 	}
 
 	return value.(string), nil
@@ -65,7 +66,7 @@ func (r *inMemoryRepository) UpdateData(ctx context.Context, id string, newValue
 	span.SetAttributes(attribute.String("data.id", id), attribute.String("data.newValue", newValue))
 
 	if _, exists := r.data.Load(id); !exists {
-		return fmt.Errorf("data with ID %s not found", id)
+		return errs.NewInvalidInput(fmt.Errorf("data with ID %s not found", id))
 	}
 
 	r.data.Store(id, newValue)
@@ -79,7 +80,7 @@ func (r *inMemoryRepository) DeleteData(ctx context.Context, id string) error {
 	span.SetAttributes(attribute.String("data.id", id))
 
 	if _, exists := r.data.Load(id); !exists {
-		return fmt.Errorf("data with ID %s not found", id)
+		return errs.NewNotFound(fmt.Errorf("data with ID %s not found", id))
 	}
 
 	r.data.Delete(id)

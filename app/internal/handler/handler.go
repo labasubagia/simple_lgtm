@@ -2,8 +2,11 @@ package handler
 
 import (
 	"encoding/json"
+	"fmt"
 	"net/http"
 	"simple_lgtm/internal/model"
+	"simple_lgtm/internal/pkg/errs"
+	"simple_lgtm/internal/pkg/http_handler"
 	"simple_lgtm/internal/service"
 	"time"
 
@@ -12,10 +15,6 @@ import (
 	"go.opentelemetry.io/otel/attribute"
 	"go.opentelemetry.io/otel/trace"
 )
-
-type Response struct {
-	Message string `json:"message"`
-}
 
 type Handler struct {
 	service          service.Service
@@ -46,18 +45,12 @@ func (h *Handler) CreateDataHandler(w http.ResponseWriter, r *http.Request) {
 
 	var payload model.DataItem
 	if err := json.NewDecoder(r.Body).Decode(&payload); err != nil {
-		res := Response{Message: "Invalid request payload"}
-		w.Header().Set("Content-Type", "application/json")
-		w.WriteHeader(http.StatusBadRequest)
-		_ = json.NewEncoder(w).Encode(res)
+		http_handler.AbortJSON(w, errs.NewInvalidInput(fmt.Errorf("invalid request payload: %s", err.Error())))
 		span.RecordError(err, trace.WithAttributes(attribute.String("error.message", err.Error())))
 		return
 	}
 	if err := payload.Validate(); err != nil {
-		res := Response{Message: "Validation error: " + err.Error()}
-		w.Header().Set("Content-Type", "application/json")
-		w.WriteHeader(http.StatusBadRequest)
-		_ = json.NewEncoder(w).Encode(res)
+		http_handler.AbortJSON(w, errs.NewInvalidInput(fmt.Errorf("validation error: %s", err.Error())))
 		span.RecordError(err, trace.WithAttributes(attribute.String("error.message", err.Error())))
 		return
 	}
@@ -69,18 +62,14 @@ func (h *Handler) CreateDataHandler(w http.ResponseWriter, r *http.Request) {
 
 	err := h.service.CreateData(ctx, payload.ID, payload.Value)
 	if err != nil {
-		res := Response{Message: "Error creating data: " + err.Error()}
-		w.Header().Set("Content-Type", "application/json")
-		w.WriteHeader(http.StatusInternalServerError)
-		_ = json.NewEncoder(w).Encode(res)
+		http_handler.AbortJSON(w, err)
 		span.RecordError(err, trace.WithAttributes(attribute.String("error.message", err.Error())))
 		return
 	}
 
-	res := Response{Message: "Data created successfully"}
-	w.Header().Set("Content-Type", "application/json")
-	w.WriteHeader(http.StatusCreated)
-	_ = json.NewEncoder(w).Encode(res)
+	http_handler.JSON(w, http.StatusCreated, model.Response{
+		Message: "Data created successfully",
+	})
 }
 
 func (h *Handler) GetDataHandler(w http.ResponseWriter, r *http.Request) {
@@ -98,10 +87,9 @@ func (h *Handler) GetDataHandler(w http.ResponseWriter, r *http.Request) {
 
 	id := r.PathValue("id")
 	if id == "" {
-		res := Response{Message: "ID parameter is required"}
-		w.Header().Set("Content-Type", "application/json")
-		w.WriteHeader(http.StatusBadRequest)
-		_ = json.NewEncoder(w).Encode(res)
+		err := errs.NewInvalidInput(fmt.Errorf("ID parameter is required"))
+		http_handler.AbortJSON(w, err)
+		span.RecordError(err, trace.WithAttributes(attribute.String("error.message", err.Error())))
 		return
 	}
 
@@ -109,18 +97,15 @@ func (h *Handler) GetDataHandler(w http.ResponseWriter, r *http.Request) {
 
 	data, err := h.service.GetData(ctx, id)
 	if err != nil {
-		res := Response{Message: "Error retrieving data: " + err.Error()}
-		w.Header().Set("Content-Type", "application/json")
-		w.WriteHeader(http.StatusInternalServerError)
-		_ = json.NewEncoder(w).Encode(res)
+		http_handler.AbortJSON(w, err)
 		span.RecordError(err, trace.WithAttributes(attribute.String("error.message", err.Error())))
 		return
 	}
 
-	res := Response{Message: data}
-	w.Header().Set("Content-Type", "application/json")
-	w.WriteHeader(http.StatusOK)
-	_ = json.NewEncoder(w).Encode(res)
+	http_handler.JSON(w, http.StatusOK, model.Response{
+		Message: "Data retrieved successfully",
+		Data:    data,
+	})
 }
 
 func (h *Handler) UpdateDataHandler(w http.ResponseWriter, r *http.Request) {
@@ -139,18 +124,14 @@ func (h *Handler) UpdateDataHandler(w http.ResponseWriter, r *http.Request) {
 	id := r.PathValue("id")
 	var payload model.DataItem
 	if err := json.NewDecoder(r.Body).Decode(&payload); err != nil {
-		res := Response{Message: "Invalid request payload"}
-		w.Header().Set("Content-Type", "application/json")
-		w.WriteHeader(http.StatusBadRequest)
-		_ = json.NewEncoder(w).Encode(res)
+		http_handler.AbortJSON(w, errs.NewInvalidInput(fmt.Errorf("invalid request payload: %s", err.Error())))
+		span.RecordError(err, trace.WithAttributes(attribute.String("error.message", err.Error())))
 		return
 	}
 	payload.ID = id
 	if err := payload.Validate(); err != nil {
-		res := Response{Message: "Validation error: " + err.Error()}
-		w.Header().Set("Content-Type", "application/json")
-		w.WriteHeader(http.StatusBadRequest)
-		_ = json.NewEncoder(w).Encode(res)
+		http_handler.AbortJSON(w, errs.NewInvalidInput(fmt.Errorf("validation error: %s", err.Error())))
+		span.RecordError(err, trace.WithAttributes(attribute.String("error.message", err.Error())))
 		return
 	}
 
@@ -161,18 +142,14 @@ func (h *Handler) UpdateDataHandler(w http.ResponseWriter, r *http.Request) {
 
 	err := h.service.UpdateData(ctx, payload.ID, payload.Value)
 	if err != nil {
-		res := Response{Message: "Error updating data: " + err.Error()}
-		w.Header().Set("Content-Type", "application/json")
-		w.WriteHeader(http.StatusInternalServerError)
-		_ = json.NewEncoder(w).Encode(res)
+		http_handler.AbortJSON(w, err)
 		span.RecordError(err, trace.WithAttributes(attribute.String("error.message", err.Error())))
 		return
 	}
 
-	res := Response{Message: "Data updated successfully"}
-	w.Header().Set("Content-Type", "application/json")
-	w.WriteHeader(http.StatusOK)
-	_ = json.NewEncoder(w).Encode(res)
+	http_handler.JSON(w, http.StatusOK, model.Response{
+		Message: "Data updated successfully",
+	})
 }
 
 func (h *Handler) DeleteDataHandler(w http.ResponseWriter, r *http.Request) {
@@ -190,10 +167,7 @@ func (h *Handler) DeleteDataHandler(w http.ResponseWriter, r *http.Request) {
 
 	id := r.PathValue("id")
 	if id == "" {
-		res := Response{Message: "ID parameter is required"}
-		w.Header().Set("Content-Type", "application/json")
-		w.WriteHeader(http.StatusBadRequest)
-		_ = json.NewEncoder(w).Encode(res)
+		http_handler.AbortJSON(w, errs.NewInvalidInput(fmt.Errorf("ID parameter is required")))
 		return
 	}
 
@@ -201,18 +175,14 @@ func (h *Handler) DeleteDataHandler(w http.ResponseWriter, r *http.Request) {
 
 	err := h.service.DeleteData(ctx, id)
 	if err != nil {
-		res := Response{Message: "Error deleting data: " + err.Error()}
-		w.Header().Set("Content-Type", "application/json")
-		w.WriteHeader(http.StatusInternalServerError)
-		_ = json.NewEncoder(w).Encode(res)
+		http_handler.AbortJSON(w, err)
 		span.RecordError(err, trace.WithAttributes(attribute.String("error.message", err.Error())))
 		return
 	}
 
-	res := Response{Message: "Data deleted successfully"}
-	w.Header().Set("Content-Type", "application/json")
-	w.WriteHeader(http.StatusOK)
-	_ = json.NewEncoder(w).Encode(res)
+	http_handler.JSON(w, http.StatusOK, model.Response{
+		Message: "Data deleted successfully",
+	})
 }
 
 func (h *Handler) ListAllDataHandler(w http.ResponseWriter, r *http.Request) {
@@ -230,15 +200,13 @@ func (h *Handler) ListAllDataHandler(w http.ResponseWriter, r *http.Request) {
 
 	data, err := h.service.ListAllData(ctx)
 	if err != nil {
-		res := Response{Message: "Error listing all data: " + err.Error()}
-		w.Header().Set("Content-Type", "application/json")
-		w.WriteHeader(http.StatusInternalServerError)
-		_ = json.NewEncoder(w).Encode(res)
+		http_handler.AbortJSON(w, err)
 		span.RecordError(err, trace.WithAttributes(attribute.String("error.message", err.Error())))
 		return
 	}
 
-	w.Header().Set("Content-Type", "application/json")
-	w.WriteHeader(http.StatusOK)
-	_ = json.NewEncoder(w).Encode(data)
+	http_handler.JSON(w, http.StatusOK, model.Response{
+		Message: "Data retrieved successfully",
+		Data:    data,
+	})
 }
