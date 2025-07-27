@@ -2,7 +2,8 @@ services:
   lgtm:
     image: grafana/otel-lgtm:0.11.6
     ports:
-      - "3000:3000"
+      - 3000:3000
+      - 4318:4318
     environment:
       - GF_SECURITY_ADMIN_PASSWORD=admin
     restart: unless-stopped
@@ -10,7 +11,7 @@ services:
   alloy:
     image: grafana/alloy:v1.10.0
     ports:
-      - "12345:12345"
+      - 12345:12345
     volumes:
       - ./infra/alloy/config.alloy:/etc/alloy/config.alloy:ro
       - /var/log/journal:/var/log/journal:ro
@@ -25,9 +26,10 @@ services:
   app:
     build: ./app
     ports:
-      - "8080:8080"
+      - 8080:8080
     environment:
       - OTEL_EXPORTER_OTLP_ENDPOINT=http://lgtm
+      - PORT=8080
     depends_on:
       - lgtm
       - alloy

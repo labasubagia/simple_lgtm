@@ -2,10 +2,15 @@ package main
 
 import (
 	"context"
+	"fmt"
 	"log"
-	"math/rand"
+	"log/slog"
 	"net/http"
-	"time"
+	"os"
+	"simple_lgtm/internal/config"
+	"simple_lgtm/internal/handler"
+	"simple_lgtm/internal/repository"
+	"simple_lgtm/internal/service"
 
 	"go.opentelemetry.io/contrib/instrumentation/net/http/otelhttp"
 	"go.opentelemetry.io/otel"
@@ -18,15 +23,15 @@ import (
 	"github.com/prometheus/client_golang/prometheus/promhttp"
 )
 
-var (
-	requestCounter = prometheus.NewCounterVec(
+func initMetrics() (*prometheus.CounterVec, *prometheus.HistogramVec) {
+	requestCounter := prometheus.NewCounterVec(
 		prometheus.CounterOpts{
 			Name: "app_http_requests_total",
 			Help: "Total HTTP requests",
 		},
 		[]string{"path"},
 	)
-	latencyHistogram = prometheus.NewHistogramVec(
+	latencyHistogram := prometheus.NewHistogramVec(
 		prometheus.HistogramOpts{
 			Name:    "app_http_latency_seconds",
 			Help:    "Request latency",
@@ -34,17 +39,12 @@ var (
 		},
 		[]string{"path"},
 	)
-)
-
-func initMetrics() {
 	prometheus.MustRegister(requestCounter, latencyHistogram)
+	return requestCounter, latencyHistogram
 }
 
-func initTracer(ctx context.Context) func(context.Context) error {
-	exporter, err := otlptracehttp.New(ctx,
-		otlptracehttp.WithEndpoint("lgtm:4318"),
-		otlptracehttp.WithInsecure(),
-	)
+func initTracer(ctx context.Context, cfg *config.Config) func(context.Context) error {
+	exporter, err := otlptracehttp.New(ctx, otlptracehttp.WithInsecure())
 	if err != nil {
 		log.Fatalf("failed to create exporter: %v", err)
 	}
@@ -53,7 +53,7 @@ func initTracer(ctx context.Context) func(context.Context) error {
 		sdktrace.WithBatcher(exporter),
 		sdktrace.WithResource(resource.NewWithAttributes(
 			semconv.SchemaURL,
-			semconv.ServiceName("go-app"),
+			semconv.ServiceName(cfg.AppName),
 		)),
 	)
 
@@ -61,32 +61,48 @@ func initTracer(ctx context.Context) func(context.Context) error {
 	return tp.Shutdown
 }
 
-func mainHandler(w http.ResponseWriter, r *http.Request) {
-	start := time.Now()
-	path := r.URL.Path
-
-	requestCounter.WithLabelValues(path).Inc()
-	time.Sleep(time.Duration(rand.Intn(500)) * time.Millisecond)
-	latencyHistogram.WithLabelValues(path).Observe(time.Since(start).Seconds())
-
-	log.Printf("Handled request: %s", path)
-	w.Write([]byte("Hello from LGTM-integrated Go app"))
-}
-
 func main() {
-	initMetrics()
+
+	var loggerHandler slog.Handler = slog.NewJSONHandler(
+		os.Stdout,
+		&slog.HandlerOptions{
+			AddSource: true,
+			Level:     slog.LevelDebug,
+		},
+	)
+	loggerHandler = NewTraceHandler(loggerHandler)
+	logger := slog.New(loggerHandler)
+	slog.SetDefault(logger)
+
+	cfg := config.LoadConfig()
+
+	requestCounter, latencyHistogram := initMetrics()
 	ctx := context.Background()
-	shutdownTracer := initTracer(ctx)
+	shutdownTracer := initTracer(ctx, cfg)
 	defer func() {
 		if err := shutdownTracer(ctx); err != nil {
 			log.Fatalf("failed to shutdown tracer: %v", err)
 		}
 	}()
 
-	mux := http.NewServeMux()
-	mux.Handle("/", otelhttp.NewHandler(http.HandlerFunc(mainHandler), "main"))
-	mux.Handle("/metrics", promhttp.Handler())
+	repo := repository.NewInMemoryRepository()
+	svc := service.NewAppService(repo)
+	handler := handler.NewHandler(svc, requestCounter, latencyHistogram)
 
-	log.Println("Go app running on :8080")
-	log.Fatal(http.ListenAndServe(":8080", mux))
+	mux := http.NewServeMux()
+	mux.HandleFunc("GET /data", otelhttp.NewHandler(http.HandlerFunc(handler.ListAllDataHandler), "list").ServeHTTP)
+	mux.HandleFunc("GET /data/{id}", otelhttp.NewHandler(http.HandlerFunc(handler.GetDataHandler), "get").ServeHTTP)
+	mux.HandleFunc("POST /data", otelhttp.NewHandler(http.HandlerFunc(handler.CreateDataHandler), "create").ServeHTTP)
+	mux.HandleFunc("PUT /data/{id}", otelhttp.NewHandler(http.HandlerFunc(handler.UpdateDataHandler), "update").ServeHTTP)
+	mux.HandleFunc("DELETE /data/{id}", otelhttp.NewHandler(http.HandlerFunc(handler.DeleteDataHandler), "delete").ServeHTTP)
+
+	mux.HandleFunc("GET /metrics", promhttp.Handler().ServeHTTP)
+
+	slog.Info("app started", slog.Any("port", cfg.Port))
+
+	err := http.ListenAndServe(fmt.Sprintf(":%d", cfg.Port), mux)
+	if err != nil {
+		slog.Error("failed to start server", slog.Any("error", err))
+		return
+	}
 }
