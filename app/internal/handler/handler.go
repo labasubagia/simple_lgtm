@@ -18,12 +18,12 @@ import (
 )
 
 type Handler struct {
-	service          service.Service
+	service          *service.Service
 	requestCounter   *prometheus.CounterVec
 	latencyHistogram *prometheus.HistogramVec
 }
 
-func NewHandler(svc service.Service, requestCounter *prometheus.CounterVec, latencyHistogram *prometheus.HistogramVec) *Handler {
+func NewHandler(svc *service.Service, requestCounter *prometheus.CounterVec, latencyHistogram *prometheus.HistogramVec) *Handler {
 	return &Handler{
 		service:          svc,
 		requestCounter:   requestCounter,

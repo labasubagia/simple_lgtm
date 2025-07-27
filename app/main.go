@@ -40,7 +40,7 @@ func main() {
 	}()
 
 	repo := repository.NewInMemoryRepository()
-	svc := service.NewAppService(repo)
+	svc := service.NewService(repo)
 	hldr := handler.NewHandler(svc, requestCounter, latencyHistogram)
 
 	mux := http.NewServeMux()

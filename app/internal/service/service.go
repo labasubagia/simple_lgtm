@@ -10,25 +10,17 @@ import (
 	"go.opentelemetry.io/otel/attribute"
 )
 
-type Service interface {
-	CreateData(ctx context.Context, id string, value string) error
-	GetData(ctx context.Context, id string) (string, error)
-	UpdateData(ctx context.Context, id string, newValue string) error
-	DeleteData(ctx context.Context, id string) error
-	ListAllData(ctx context.Context) ([]model.DataItem, error)
-}
-
-type appService struct {
+type Service struct {
 	repo repository.Repository
 }
 
-func NewAppService(repo repository.Repository) Service {
-	return &appService{
+func NewService(repo repository.Repository) *Service {
+	return &Service{
 		repo: repo,
 	}
 }
 
-func (s *appService) CreateData(ctx context.Context, id string, value string) error {
+func (s *Service) CreateData(ctx context.Context, id string, value string) error {
 	_, span := otel.Tracer("app-tracer").Start(ctx, "CreateDataService")
 	defer span.End()
 
@@ -41,7 +33,7 @@ func (s *appService) CreateData(ctx context.Context, id string, value string) er
 	return nil
 }
 
-func (s *appService) GetData(ctx context.Context, id string) (string, error) {
+func (s *Service) GetData(ctx context.Context, id string) (string, error) {
 	_, span := otel.Tracer("app-tracer").Start(ctx, "GetDataService")
 	defer span.End()
 
@@ -54,7 +46,7 @@ func (s *appService) GetData(ctx context.Context, id string) (string, error) {
 	return data, nil
 }
 
-func (s *appService) UpdateData(ctx context.Context, id string, newValue string) error {
+func (s *Service) UpdateData(ctx context.Context, id string, newValue string) error {
 	_, span := otel.Tracer("app-tracer").Start(ctx, "UpdateDataService")
 	defer span.End()
 
@@ -67,7 +59,7 @@ func (s *appService) UpdateData(ctx context.Context, id string, newValue string)
 	return nil
 }
 
-func (s *appService) DeleteData(ctx context.Context, id string) error {
+func (s *Service) DeleteData(ctx context.Context, id string) error {
 	_, span := otel.Tracer("app-tracer").Start(ctx, "DeleteDataService")
 	defer span.End()
 
@@ -80,7 +72,7 @@ func (s *appService) DeleteData(ctx context.Context, id string) error {
 	return nil
 }
 
-func (s *appService) ListAllData(ctx context.Context) ([]model.DataItem, error) {
+func (s *Service) ListAllData(ctx context.Context) ([]model.DataItem, error) {
 	_, span := otel.Tracer("app-tracer").Start(ctx, "ListAllDataService")
 	defer span.End()
 
