@@ -33,14 +33,15 @@ func NewHandler(svc service.Service, requestCounter *prometheus.CounterVec, late
 
 func (h *Handler) CreateDataHandler(w http.ResponseWriter, r *http.Request) {
 	start := time.Now()
+	method := r.Method
 	path := r.URL.Path
 
 	ctx, span := otel.Tracer("app-tracer").Start(r.Context(), "CreateDataHandler")
 	defer span.End()
 
-	h.requestCounter.WithLabelValues(path).Inc()
+	h.requestCounter.WithLabelValues(method, path).Inc()
 	defer func() {
-		h.latencyHistogram.WithLabelValues(path).Observe(time.Since(start).Seconds())
+		h.latencyHistogram.WithLabelValues(method, path).Observe(time.Since(start).Seconds())
 	}()
 
 	var payload model.DataItem
@@ -84,14 +85,15 @@ func (h *Handler) CreateDataHandler(w http.ResponseWriter, r *http.Request) {
 
 func (h *Handler) GetDataHandler(w http.ResponseWriter, r *http.Request) {
 	start := time.Now()
+	method := r.Method
 	path := r.URL.Path
 
 	ctx, span := otel.Tracer("app-tracer").Start(r.Context(), "GetDataHandler")
 	defer span.End()
 
-	h.requestCounter.WithLabelValues(path).Inc()
+	h.requestCounter.WithLabelValues(method, path).Inc()
 	defer func() {
-		h.latencyHistogram.WithLabelValues(path).Observe(time.Since(start).Seconds())
+		h.latencyHistogram.WithLabelValues(method, path).Observe(time.Since(start).Seconds())
 	}()
 
 	id := r.PathValue("id")
@@ -123,14 +125,15 @@ func (h *Handler) GetDataHandler(w http.ResponseWriter, r *http.Request) {
 
 func (h *Handler) UpdateDataHandler(w http.ResponseWriter, r *http.Request) {
 	start := time.Now()
+	method := r.Method
 	path := r.URL.Path
 
 	ctx, span := otel.Tracer("app-tracer").Start(r.Context(), "UpdateDataHandler")
 	defer span.End()
 
-	h.requestCounter.WithLabelValues(path).Inc()
+	h.requestCounter.WithLabelValues(method, path).Inc()
 	defer func() {
-		h.latencyHistogram.WithLabelValues(path).Observe(time.Since(start).Seconds())
+		h.latencyHistogram.WithLabelValues(method, path).Observe(time.Since(start).Seconds())
 	}()
 
 	id := r.PathValue("id")
@@ -174,14 +177,15 @@ func (h *Handler) UpdateDataHandler(w http.ResponseWriter, r *http.Request) {
 
 func (h *Handler) DeleteDataHandler(w http.ResponseWriter, r *http.Request) {
 	start := time.Now()
+	method := r.Method
 	path := r.URL.Path
 
 	ctx, span := otel.Tracer("app-tracer").Start(r.Context(), "DeleteDataHandler")
 	defer span.End()
 
-	h.requestCounter.WithLabelValues(path).Inc()
+	h.requestCounter.WithLabelValues(method, path).Inc()
 	defer func() {
-		h.latencyHistogram.WithLabelValues(path).Observe(time.Since(start).Seconds())
+		h.latencyHistogram.WithLabelValues(method, path).Observe(time.Since(start).Seconds())
 	}()
 
 	id := r.PathValue("id")
@@ -213,14 +217,15 @@ func (h *Handler) DeleteDataHandler(w http.ResponseWriter, r *http.Request) {
 
 func (h *Handler) ListAllDataHandler(w http.ResponseWriter, r *http.Request) {
 	start := time.Now()
+	method := r.Method
 	path := r.URL.Path
 
 	ctx, span := otel.Tracer("app-tracer").Start(r.Context(), "ListAllDataHandler")
 	defer span.End()
 
-	h.requestCounter.WithLabelValues(path).Inc()
+	h.requestCounter.WithLabelValues(method, path).Inc()
 	defer func() {
-		h.latencyHistogram.WithLabelValues(path).Observe(time.Since(start).Seconds())
+		h.latencyHistogram.WithLabelValues(method, path).Observe(time.Since(start).Seconds())
 	}()
 
 	data, err := h.service.ListAllData(ctx)

@@ -1,3 +1,7 @@
+livedebugging {
+  enabled = true
+}
+
 loki.relabel "journal" {
   forward_to = []
   rule {
@@ -22,3 +26,19 @@ loki.write "endpoint" {
   }
 }
 
+
+prometheus.scrape "default" {
+  targets = [
+    {
+      __address__ = "app:8080",
+    },
+  ]
+
+  forward_to = [prometheus.remote_write.default.receiver]
+}
+
+prometheus.remote_write "default" {
+  endpoint {
+    url = "http://lgtm:9090/api/v1/write"
+  }
+}

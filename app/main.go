@@ -29,7 +29,7 @@ func initMetrics() (*prometheus.CounterVec, *prometheus.HistogramVec) {
 			Name: "app_http_requests_total",
 			Help: "Total HTTP requests",
 		},
-		[]string{"path"},
+		[]string{"method", "path"},
 	)
 	latencyHistogram := prometheus.NewHistogramVec(
 		prometheus.HistogramOpts{
@@ -37,7 +37,7 @@ func initMetrics() (*prometheus.CounterVec, *prometheus.HistogramVec) {
 			Help:    "Request latency",
 			Buckets: prometheus.DefBuckets,
 		},
-		[]string{"path"},
+		[]string{"method", "path"},
 	)
 	prometheus.MustRegister(requestCounter, latencyHistogram)
 	return requestCounter, latencyHistogram
@@ -70,7 +70,7 @@ func main() {
 			Level:     slog.LevelDebug,
 		},
 	)
-	loggerHandler = NewTraceHandler(loggerHandler)
+	loggerHandler = NewTraceSlogHandler(loggerHandler)
 	logger := slog.New(loggerHandler)
 	slog.SetDefault(logger)
 
