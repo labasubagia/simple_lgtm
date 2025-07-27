@@ -11,7 +11,7 @@ type Config struct {
 	OtelExporterOLTPEndpoint string
 }
 
-func LoadConfig() *Config {
+func Load() *Config {
 	appName := os.Getenv("APP_NAME")
 	if appName == "" {
 		appName = "app"
@@ -24,7 +24,7 @@ func LoadConfig() *Config {
 
 	otelExporterOLTPEndpoint := os.Getenv("OTEL_EXPORTER_OTLP_ENDPOINT")
 	if otelExporterOLTPEndpoint == "" {
-		otelExporterOLTPEndpoint = "http://localhost"
+		otelExporterOLTPEndpoint = "http://localhost:4318"
 	}
 
 	return &Config{

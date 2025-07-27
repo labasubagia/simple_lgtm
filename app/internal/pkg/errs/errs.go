@@ -49,9 +49,9 @@ func MapHttp(err error) (statusCode int, message string) {
 		return http.StatusOK, ""
 	}
 
-	var e *appError
-	if errors.As(err, &e) {
-		switch e.Code {
+	var appErr *appError
+	if errors.As(err, &appErr) {
+		switch appErr.Code {
 		case ErrInternal:
 			return http.StatusInternalServerError, err.Error()
 		case ErrNotFound:
