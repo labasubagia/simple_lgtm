@@ -16,7 +16,7 @@ loki.process "default" {
 // Exporter: Push logs to Loki
 loki.write "default" {
   endpoint {
-    url = "http://loki:3100/loki/api/v1/push"
+    url = "http://lgtm:3100/loki/api/v1/push"
   }
 }
 
