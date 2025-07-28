@@ -14,6 +14,7 @@ import (
 	"github.com/prometheus/client_golang/prometheus"
 	"go.opentelemetry.io/otel"
 	"go.opentelemetry.io/otel/attribute"
+	"go.opentelemetry.io/otel/codes"
 	"go.opentelemetry.io/otel/trace"
 )
 
@@ -48,11 +49,13 @@ func (h *Handler) CreateDataHandler(w http.ResponseWriter, r *http.Request) {
 	if err := json.NewDecoder(r.Body).Decode(&payload); err != nil {
 		http_handler.AbortJSON(ctx, w, errs.NewInvalidInput(fmt.Errorf("invalid request payload: %s", err.Error())))
 		span.RecordError(err, trace.WithAttributes(attribute.String("error.message", err.Error())))
+		span.SetStatus(codes.Error, "invalid request payload")
 		return
 	}
 	if err := payload.Validate(); err != nil {
 		http_handler.AbortJSON(ctx, w, errs.NewInvalidInput(fmt.Errorf("validation error: %s", err.Error())))
 		span.RecordError(err, trace.WithAttributes(attribute.String("error.message", err.Error())))
+		span.SetStatus(codes.Error, "validation error")
 		return
 	}
 
@@ -65,10 +68,12 @@ func (h *Handler) CreateDataHandler(w http.ResponseWriter, r *http.Request) {
 	if err != nil {
 		http_handler.AbortJSON(ctx, w, err)
 		span.RecordError(err, trace.WithAttributes(attribute.String("error.message", err.Error())))
+		span.SetStatus(codes.Error, "failed to create data")
 		return
 	}
 
 	http_handler.JSON(ctx, w, http.StatusCreated, "Data created successfully", nil)
+	span.SetStatus(codes.Ok, "success")
 }
 
 func (h *Handler) GetDataHandler(w http.ResponseWriter, r *http.Request) {
@@ -89,6 +94,7 @@ func (h *Handler) GetDataHandler(w http.ResponseWriter, r *http.Request) {
 		err := errs.NewInvalidInput(fmt.Errorf("ID parameter is required"))
 		http_handler.AbortJSON(ctx, w, err)
 		span.RecordError(err, trace.WithAttributes(attribute.String("error.message", err.Error())))
+		span.SetStatus(codes.Error, "ID parameter is required")
 		return
 	}
 
@@ -98,10 +104,12 @@ func (h *Handler) GetDataHandler(w http.ResponseWriter, r *http.Request) {
 	if err != nil {
 		http_handler.AbortJSON(ctx, w, err)
 		span.RecordError(err, trace.WithAttributes(attribute.String("error.message", err.Error())))
+		span.SetStatus(codes.Error, "failed to get data")
 		return
 	}
 
 	http_handler.JSON(ctx, w, http.StatusOK, "ok", data)
+	span.SetStatus(codes.Ok, "success")
 }
 
 func (h *Handler) UpdateDataHandler(w http.ResponseWriter, r *http.Request) {
@@ -122,12 +130,14 @@ func (h *Handler) UpdateDataHandler(w http.ResponseWriter, r *http.Request) {
 	if err := json.NewDecoder(r.Body).Decode(&payload); err != nil {
 		http_handler.AbortJSON(ctx, w, errs.NewInvalidInput(fmt.Errorf("invalid request payload: %s", err.Error())))
 		span.RecordError(err, trace.WithAttributes(attribute.String("error.message", err.Error())))
+		span.SetStatus(codes.Error, "invalid request payload")
 		return
 	}
 	payload.ID = id
 	if err := payload.Validate(); err != nil {
 		http_handler.AbortJSON(ctx, w, errs.NewInvalidInput(fmt.Errorf("validation error: %s", err.Error())))
 		span.RecordError(err, trace.WithAttributes(attribute.String("error.message", err.Error())))
+		span.SetStatus(codes.Error, "validation error")
 		return
 	}
 
@@ -140,10 +150,12 @@ func (h *Handler) UpdateDataHandler(w http.ResponseWriter, r *http.Request) {
 	if err != nil {
 		http_handler.AbortJSON(ctx, w, err)
 		span.RecordError(err, trace.WithAttributes(attribute.String("error.message", err.Error())))
+		span.SetStatus(codes.Error, "failed to update data")
 		return
 	}
 
 	http_handler.JSON(ctx, w, http.StatusOK, "Data updated successfully", nil)
+	span.SetStatus(codes.Ok, "success")
 }
 
 func (h *Handler) DeleteDataHandler(w http.ResponseWriter, r *http.Request) {
@@ -162,6 +174,7 @@ func (h *Handler) DeleteDataHandler(w http.ResponseWriter, r *http.Request) {
 	id := r.PathValue("id")
 	if id == "" {
 		http_handler.AbortJSON(ctx, w, errs.NewInvalidInput(fmt.Errorf("ID parameter is required")))
+		span.SetStatus(codes.Error, "ID parameter is required")
 		return
 	}
 
@@ -171,10 +184,12 @@ func (h *Handler) DeleteDataHandler(w http.ResponseWriter, r *http.Request) {
 	if err != nil {
 		http_handler.AbortJSON(ctx, w, err)
 		span.RecordError(err, trace.WithAttributes(attribute.String("error.message", err.Error())))
+		span.SetStatus(codes.Error, "failed to delete data")
 		return
 	}
 
 	http_handler.JSON(ctx, w, http.StatusOK, "Data deleted successfully", nil)
+	span.SetStatus(codes.Ok, "success")
 }
 
 func (h *Handler) ListAllDataHandler(w http.ResponseWriter, r *http.Request) {
@@ -194,8 +209,10 @@ func (h *Handler) ListAllDataHandler(w http.ResponseWriter, r *http.Request) {
 	if err != nil {
 		http_handler.AbortJSON(ctx, w, err)
 		span.RecordError(err, trace.WithAttributes(attribute.String("error.message", err.Error())))
+		span.SetStatus(codes.Error, "Failed to list data")
 		return
 	}
 
 	http_handler.JSON(ctx, w, http.StatusOK, "ok", data)
+	span.SetStatus(codes.Ok, "success")
 }

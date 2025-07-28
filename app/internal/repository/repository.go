@@ -11,6 +11,7 @@ import (
 
 	"go.opentelemetry.io/otel"
 	"go.opentelemetry.io/otel/attribute"
+	"go.opentelemetry.io/otel/codes"
 )
 
 type Repository interface {
@@ -38,10 +39,12 @@ func (r *inMemoryRepository) CreateData(ctx context.Context, id string, value st
 	span.SetAttributes(attribute.String("data.id", id), attribute.String("data.value", value))
 
 	if _, exists := r.data.Load(id); exists {
+		span.SetStatus(codes.Error, "data already exists")
 		return errs.NewInvalidInput(fmt.Errorf("data with ID %s already exists", id))
 	}
 
 	r.data.Store(id, value)
+	span.SetStatus(codes.Ok, "success")
 	return nil
 }
 
@@ -53,9 +56,11 @@ func (r *inMemoryRepository) GetData(ctx context.Context, id string) (string, er
 
 	value, ok := r.data.Load(id)
 	if !ok {
+		span.SetStatus(codes.Error, "data not found")
 		return "", errs.NewNotFound(fmt.Errorf("data with ID %s not found", id))
 	}
 
+	span.SetStatus(codes.Ok, "success")
 	return value.(string), nil
 }
 
@@ -66,10 +71,12 @@ func (r *inMemoryRepository) UpdateData(ctx context.Context, id string, newValue
 	span.SetAttributes(attribute.String("data.id", id), attribute.String("data.newValue", newValue))
 
 	if _, exists := r.data.Load(id); !exists {
+		span.SetStatus(codes.Error, "data not found")
 		return errs.NewInvalidInput(fmt.Errorf("data with ID %s not found", id))
 	}
 
 	r.data.Store(id, newValue)
+	span.SetStatus(codes.Ok, "success")
 	return nil
 }
 
@@ -80,10 +87,12 @@ func (r *inMemoryRepository) DeleteData(ctx context.Context, id string) error {
 	span.SetAttributes(attribute.String("data.id", id))
 
 	if _, exists := r.data.Load(id); !exists {
+		span.SetStatus(codes.Error, "data not found")
 		return errs.NewNotFound(fmt.Errorf("data with ID %s not found", id))
 	}
 
 	r.data.Delete(id)
+	span.SetStatus(codes.Ok, "success")
 	return nil
 }
 
@@ -100,5 +109,6 @@ func (r *inMemoryRepository) ListAllData(ctx context.Context) ([]model.DataItem,
 		return true
 	})
 
+	span.SetStatus(codes.Ok, "success")
 	return dataList, nil
 }
