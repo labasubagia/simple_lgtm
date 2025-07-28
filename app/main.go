@@ -32,7 +32,7 @@ func main() {
 
 	requestCounter, latencyHistogram := metrics.Init()
 	ctx := context.Background()
-	shutdownTracer := tracer.Init(ctx, cfg)
+	shutdownTracer := tracer.Init(ctx, cfg.AppName)
 	defer func() {
 		if err := shutdownTracer(ctx); err != nil {
 			log.Fatalf("failed to shutdown tracer: %v", err)
