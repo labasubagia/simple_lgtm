@@ -3,7 +3,6 @@ services:
     image: grafana/otel-lgtm:0.11.6
     ports:
       - 3000:3000
-      - 4318:4318
     environment:
       - GF_SECURITY_ADMIN_PASSWORD=admin
     restart: unless-stopped
@@ -28,7 +27,7 @@ services:
     ports:
       - 8080:8080
     environment:
-      - OTEL_EXPORTER_OTLP_ENDPOINT=http://lgtm:4318
+      - OTEL_EXPORTER_OTLP_ENDPOINT=http://alloy:4318
       - PORT=8080
     depends_on:
       - lgtm
